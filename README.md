@@ -63,6 +63,38 @@ applinks:yxВАШ_CLIENT_ID.oauth.yandex.ru
 ```
 
 
+3. **SceneDelegate (для iOS 13+)**:
+Если ваше приложение использует `SceneDelegate` для управления жизненным циклом, вам потребуется вручную проксировать URL-события в SDK:
+
+```swift
+import Flutter
+import UIKit
+import YandexLoginSDK
+
+class SceneDelegate: FlutterSceneDelegate {
+    override func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
+        super.scene(scene, openURLContexts: URLContexts)
+        for context in URLContexts {
+            _ = YandexLoginSDK.shared.handleOpen(context.url)
+        }
+    }
+    
+    override func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
+        super.scene(scene, willConnectTo: session, options: connectionOptions)
+        // URL Schemes
+        for context in connectionOptions.urlContexts {
+            _ = YandexLoginSDK.shared.handleOpen(context.url)
+        }
+        // Universal Links
+        for userActivity in connectionOptions.userActivities {
+            if userActivity.activityType == NSUserActivityTypeBrowsingWeb, let url = userActivity.webpageURL {
+                _ = YandexLoginSDK.shared.handleOpen(url)
+            }
+        }
+    }
+}
+```
+
 ---
 
 ## 🚀 Использование
@@ -78,8 +110,9 @@ Future<void> loginWithYandex() async {
   try {
     final result = await _yandexAuth.signIn();
     if (result != null) {
-      final String token = result['token'];
-      print('Токен успешно получен: $token');
+      final String token = result.token;
+      final int? expiresIn = result.expiresIn; // На iOS может быть null
+      print('Токен успешно получен: $token, истекает через: $expiresIn сек.');
     } else {
       print('Авторизация отменена пользователем');
     }

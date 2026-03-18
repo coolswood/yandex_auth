@@ -8,7 +8,7 @@ class MockYandexAuthPlatform
     with MockPlatformInterfaceMixin
     implements YandexAuthPlatform {
   @override
-  Future<Map<String, dynamic>?> signIn() => Future.value({'token': '42'});
+  Future<YandexAuthResult?> signIn() => Future.value(YandexAuthResult(token: '42'));
 }
 
 void main() {
@@ -23,6 +23,7 @@ void main() {
     MockYandexAuthPlatform fakePlatform = MockYandexAuthPlatform();
     YandexAuthPlatform.instance = fakePlatform;
 
-    expect(await yandexAuthPlugin.signIn(), {'token': '42'});
+    final result = await yandexAuthPlugin.signIn();
+    expect(result?.token, '42');
   });
 }
