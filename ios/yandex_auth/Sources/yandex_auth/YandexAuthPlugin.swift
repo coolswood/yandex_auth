@@ -39,7 +39,11 @@ public class YandexAuthPlugin: NSObject, FlutterPlugin, YandexLoginSDKObserver {
               let url = userActivity.webpageURL else {
             return false
         }
-        return YandexLoginSDK.shared.handleOpen(url)
+        let handled = YandexLoginSDK.shared.handleOpen(url)
+        if handled {
+            restorationHandler([])
+        }
+        return handled
     }
 
     private func signIn() {
