@@ -28,6 +28,20 @@ public class YandexAuthPlugin: NSObject, FlutterPlugin, YandexLoginSDKObserver {
         }
     }
 
+    // MARK: - App Delegate
+
+    public func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey : Any] = [:]) -> Bool {
+        return YandexLoginSDK.shared.handleOpen(url)
+    }
+
+    public func application(_ application: UIApplication, continue userActivity: NSUserActivity, restorationHandler: @escaping ([Any]?) -> Void) -> Bool {
+        guard userActivity.activityType == NSUserActivityTypeBrowsingWeb,
+              let url = userActivity.webpageURL else {
+            return false
+        }
+        return YandexLoginSDK.shared.handleOpen(url)
+    }
+
     private func signIn() {
         var rootViewController: UIViewController? = nil
         
@@ -65,12 +79,18 @@ public class YandexAuthPlugin: NSObject, FlutterPlugin, YandexLoginSDKObserver {
         switch result {
         case .success(let loginResult):
             methodResult([
-                "token": loginResult.token,
-                "expiresIn": 0 
+                "token": loginResult.token
             ])
         case .failure(let error):
             methodResult(FlutterError(code: "YANDEX_AUTH_ERROR", message: error.localizedDescription, details: nil))
         }
         self.methodResult = nil
+    }
+
+    // MARK: - Lifecycle Cleanup
+
+    public func detachFromEngine(for registrar: FlutterPluginRegistrar) {
+        YandexLoginSDK.shared.remove(observer: self)
+        methodResult = nil
     }
 }
