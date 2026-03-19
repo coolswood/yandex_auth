@@ -7,6 +7,7 @@ public class YandexAuthPlugin: NSObject, FlutterPlugin, YandexLoginSDKObserver {
     private static var activationError: String?
 
     public static func register(with registrar: FlutterPluginRegistrar) {
+        activationError = nil // Сбрасываем состояние перед каждой регистрацией
         let channel = FlutterMethodChannel(name: "yandex_auth", binaryMessenger: registrar.messenger())
         let instance = YandexAuthPlugin()
         registrar.addMethodCallDelegate(instance, channel: channel)
