@@ -15,13 +15,17 @@ import kotlin.test.Test
 
 internal class YandexAuthPluginTest {
     @Test
-    fun onMethodCall_getPlatformVersion_returnsExpectedValue() {
+    fun onMethodCall_signIn_withoutActivity_returnsError() {
         val plugin = YandexAuthPlugin()
 
-        val call = MethodCall("getPlatformVersion", null)
+        val call = MethodCall("signIn", null)
         val mockResult: MethodChannel.Result = Mockito.mock(MethodChannel.Result::class.java)
         plugin.onMethodCall(call, mockResult)
 
-        Mockito.verify(mockResult).success("Android " + android.os.Build.VERSION.RELEASE)
+        Mockito.verify(mockResult).error(
+            Mockito.eq("sign_in_failed"),
+            Mockito.eq("Activity or Contract not initialized"),
+            Mockito.isNull()
+        )
     }
 }

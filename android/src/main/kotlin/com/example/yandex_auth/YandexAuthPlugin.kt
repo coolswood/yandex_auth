@@ -26,6 +26,7 @@ class YandexAuthPlugin :
     private var activity: Activity? = null
     private var contract: YandexAuthSdkContract? = null
     private var pendingResult: Result? = null
+    private var activityBinding: ActivityPluginBinding? = null
     private val REQUEST_LOGIN_SDK = 52500
 
     override fun onAttachedToEngine(flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
@@ -65,29 +66,39 @@ class YandexAuthPlugin :
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         channel.setMethodCallHandler(null)
+        pendingResult?.error("sign_in_failed", "Engine detached", null)
+        pendingResult = null
     }
 
     // MARK: - ActivityAware
 
     override fun onAttachedToActivity(binding: ActivityPluginBinding) {
+        activityBinding = binding
         activity = binding.activity
         contract = YandexAuthSdkContract(YandexAuthOptions(binding.activity, true))
         binding.addActivityResultListener(this)
     }
 
     override fun onDetachedFromActivityForConfigChanges() {
+        activityBinding?.removeActivityResultListener(this)
+        activityBinding = null
         activity = null
     }
 
     override fun onReattachedToActivityForConfigChanges(binding: ActivityPluginBinding) {
+        activityBinding = binding
         activity = binding.activity
         contract = YandexAuthSdkContract(YandexAuthOptions(binding.activity, true))
         binding.addActivityResultListener(this)
     }
 
     override fun onDetachedFromActivity() {
+        activityBinding?.removeActivityResultListener(this)
+        activityBinding = null
         activity = null
         contract = null
+        pendingResult?.error("sign_in_failed", "Activity detached", null)
+        pendingResult = null
     }
 
     // MARK: - ActivityResultListener
@@ -112,10 +123,15 @@ class YandexAuthPlugin :
                     pendingResult?.success(response)
                 }
                 is YandexAuthResult.Failure -> {
-                    pendingResult?.error("sign_in_failed", "Signin failed", null)
+                    val exception = authResult.exception
+                    pendingResult?.error(
+                        "sign_in_failed",
+                        exception.message ?: "Signin failed",
+                        exception.toString()
+                    )
                 }
                 is YandexAuthResult.Cancelled -> {
-                    pendingResult?.error("sign_in_failed", "Signin cancelled", null)
+                    pendingResult?.error("sign_in_failed", "Signin cancelled", "Cancelled by user")
                 }
             }
             pendingResult = null

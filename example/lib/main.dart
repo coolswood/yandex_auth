@@ -31,7 +31,7 @@ class _MyAppState extends State<MyApp> {
     try {
       final result = await _yandexAuthPlugin.signIn();
       if (result != null) {
-        platformVersion = 'Token: ${result['token']}';
+        platformVersion = 'Token: ${result.token}';
       } else {
         platformVersion = 'Sign in returned null';
       }

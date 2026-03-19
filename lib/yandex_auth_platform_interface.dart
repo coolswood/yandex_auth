@@ -2,6 +2,8 @@ import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
 import 'yandex_auth_method_channel.dart';
 
+import 'src/models/yandex_auth_result.dart';
+
 abstract class YandexAuthPlatform extends PlatformInterface {
   /// Constructs a YandexAuthPlatform.
   YandexAuthPlatform() : super(token: _token);
@@ -23,7 +25,7 @@ abstract class YandexAuthPlatform extends PlatformInterface {
     _instance = instance;
   }
 
-  Future<Map<String, dynamic>?> signIn() {
+  Future<YandexAuthResult?> signIn() {
     throw UnimplementedError('signIn() has not been implemented.');
   }
 }

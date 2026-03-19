@@ -3,13 +3,11 @@
 Плагин для интеграции **Yandex Login SDK** (Авторизация через Яндекс) в приложения на Flutter. 
 Поддерживает **Android** (нативный SDK) и **iOS** (через Swift Package Manager).
 
----
 
 ## 🛠 Подготовка к работе
 
 Для начала зарегистрируйте ваше приложение в [Яндекс OAuth](https://oauth.yandex.ru/) и получите **Client ID**.
 
----
 
 ### 📱 Android Setup
 
@@ -23,12 +21,6 @@ android {
     }
 }
 ```
-2. Убедитесь, что у вас добавлены права на интернет в `android/app/src/main/AndroidManifest.xml`:
-```xml
-<uses-permission android:name="android.permission.INTERNET" />
-```
-
----
 
 ### 🍏 iOS Setup
 
@@ -66,25 +58,6 @@ android {
 applinks:yxВАШ_CLIENT_ID.oauth.yandex.ru
 ```
 
-3. **Обработка ссылок в AppDelegate.swift**:
-Добавьте эти методы для поддержки возврата в приложение:
-```swift
-// Для Universal Links
-@available(iOS 8.0, *)
-func application(_ application: UIApplication, continue userActivity: NSUserActivity, restorationHandler: @escaping ([Any]?) -> Void) -> Bool {
-    // Внутри плагина мы ловим это событие автоматически, 
-    // но если вы используете сложную маршрутизацию — убедитесь, что событие доходит.
-    return true 
-}
-
-// Для URL-схем
-override func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey : Any] = [:]) -> Bool {
-    return super.application(app, open: url, options: options)
-}
-```
-
----
-
 ## 🚀 Использование
 
 Вызовите метод `signIn()` для запуска процесса:
@@ -98,8 +71,9 @@ Future<void> loginWithYandex() async {
   try {
     final result = await _yandexAuth.signIn();
     if (result != null) {
-      final String token = result['token'];
-      print('Токен успешно получен: $token');
+      final String token = result.token;
+      final int? expiresIn = result.expiresIn; // На iOS может быть null
+      print('Токен успешно получен: $token, истекает через: $expiresIn сек.');
     } else {
       print('Авторизация отменена пользователем');
     }
@@ -108,3 +82,27 @@ Future<void> loginWithYandex() async {
   }
 }
 ```
+
+### ⚠️ Обработка ошибок
+
+В случае ошибок на стороны нативных SDK (проблемы с сетью, некорректная настройка приложения в консоли Яндекс и т.д.) плагин выбросит `PlatformException`.
+
+Вы можете получить детальную информацию для логирования:
+
+```dart
+import 'package:flutter/services.dart';
+
+Future<void> loginWithYandex() async {
+  try {
+    final result = await _yandexAuth.signIn();
+    // ...
+  } on PlatformException catch (e) {
+    print('Код ошибки: ${e.code}');
+    print('Сообщение: ${e.message}');
+    print('Детали (нативный стек): ${e.details}');
+  } catch (e) {
+    print('Неизвестная ошибка: $e');
+  }
+}
+```
+
