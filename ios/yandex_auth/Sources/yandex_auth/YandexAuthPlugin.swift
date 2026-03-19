@@ -4,6 +4,7 @@ import YandexLoginSDK
 
 public class YandexAuthPlugin: NSObject, FlutterPlugin, YandexLoginSDKObserver {
     private var methodResult: FlutterResult?
+    private static var activationError: String?
 
     public static func register(with registrar: FlutterPluginRegistrar) {
         let channel = FlutterMethodChannel(name: "yandex_auth", binaryMessenger: registrar.messenger())
@@ -13,13 +14,18 @@ public class YandexAuthPlugin: NSObject, FlutterPlugin, YandexLoginSDKObserver {
         
         // Автоматически активируем YandexLoginSDK из Info.plist
         if let clientId = Bundle.main.object(forInfoDictionaryKey: "YAClientId") as? String {
-            do {
-                try YandexLoginSDK.shared.activate(with: clientId)
-            } catch {
-                print("Failed to activate YandexLoginSDK: \(error)")
+            let trimmedClientId = clientId.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmedClientId.isEmpty {
+                activationError = "YAClientId in Info.plist is empty or whitespace"
+            } else {
+                do {
+                    try YandexLoginSDK.shared.activate(with: trimmedClientId)
+                } catch {
+                    activationError = "Failed to activate YandexLoginSDK: \(error.localizedDescription)"
+                }
             }
         } else {
-            print("YAClientId key missing in Info.plist")
+            activationError = "YAClientId key missing in Info.plist"
         }
         
         // Добавляем наблюдателя
@@ -28,6 +34,10 @@ public class YandexAuthPlugin: NSObject, FlutterPlugin, YandexLoginSDKObserver {
 
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         if call.method == "signIn" {
+            if let activationError = YandexAuthPlugin.activationError {
+                result(FlutterError(code: "ACTIVATION_ERROR", message: activationError, details: nil))
+                return
+            }
             if methodResult != nil {
                 result(FlutterError(code: "CONCURRENT_OPERATIONS", message: "Concurrent operations detected", details: nil))
                 return
@@ -38,6 +48,7 @@ public class YandexAuthPlugin: NSObject, FlutterPlugin, YandexLoginSDKObserver {
             result(FlutterMethodNotImplemented)
         }
     }
+
 
     // MARK: - App Delegate
 
