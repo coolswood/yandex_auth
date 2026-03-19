@@ -70,7 +70,7 @@ public class YandexAuthPlugin: NSObject, FlutterPlugin, YandexLoginSDKObserver {
         do {
             try YandexLoginSDK.shared.authorize(with: validRootViewController)
         } catch {
-            methodResult?(FlutterError(code: "YANDEX_AUTH_ERROR", message: error.localizedDescription, details: nil))
+            methodResult?(FlutterError(code: "YANDEX_AUTH_ERROR", message: error.localizedDescription, details: "\(error)"))
             methodResult = nil
         }
     }
@@ -86,7 +86,7 @@ public class YandexAuthPlugin: NSObject, FlutterPlugin, YandexLoginSDKObserver {
                 "token": loginResult.token
             ])
         case .failure(let error):
-            methodResult(FlutterError(code: "YANDEX_AUTH_ERROR", message: error.localizedDescription, details: nil))
+            methodResult(FlutterError(code: "YANDEX_AUTH_ERROR", message: error.localizedDescription, details: "\(error)"))
         }
         self.methodResult = nil
     }

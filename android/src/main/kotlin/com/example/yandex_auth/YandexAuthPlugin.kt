@@ -123,10 +123,15 @@ class YandexAuthPlugin :
                     pendingResult?.success(response)
                 }
                 is YandexAuthResult.Failure -> {
-                    pendingResult?.error("sign_in_failed", "Signin failed", null)
+                    val exception = authResult.exception
+                    pendingResult?.error(
+                        "sign_in_failed",
+                        exception.message ?: "Signin failed",
+                        exception.toString()
+                    )
                 }
                 is YandexAuthResult.Cancelled -> {
-                    pendingResult?.error("sign_in_failed", "Signin cancelled", null)
+                    pendingResult?.error("sign_in_failed", "Signin cancelled", "Cancelled by user")
                 }
             }
             pendingResult = null
