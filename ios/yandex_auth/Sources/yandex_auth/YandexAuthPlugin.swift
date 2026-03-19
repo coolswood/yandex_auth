@@ -11,6 +11,17 @@ public class YandexAuthPlugin: NSObject, FlutterPlugin, YandexLoginSDKObserver {
         registrar.addMethodCallDelegate(instance, channel: channel)
         registrar.addApplicationDelegate(instance) // Чтобы обрабатывать URL, если потребуется
         
+        // Автоматически активируем YandexLoginSDK из Info.plist
+        if let clientId = Bundle.main.object(forInfoDictionaryKey: "YAClientId") as? String {
+            do {
+                try YandexLoginSDK.shared.activate(with: clientId)
+            } catch {
+                print("Failed to activate YandexLoginSDK: \(error)")
+            }
+        } else {
+            print("YAClientId key missing in Info.plist")
+        }
+        
         // Добавляем наблюдателя
         YandexLoginSDK.shared.add(observer: instance)
     }
@@ -31,15 +42,11 @@ public class YandexAuthPlugin: NSObject, FlutterPlugin, YandexLoginSDKObserver {
     // MARK: - App Delegate
 
     public func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey : Any] = [:]) -> Bool {
-        return YandexLoginSDK.shared.handleOpen(url)
+        return YandexLoginSDK.shared.tryHandleOpenURL(url)
     }
 
     public func application(_ application: UIApplication, continue userActivity: NSUserActivity, restorationHandler: @escaping ([Any]?) -> Void) -> Bool {
-        guard userActivity.activityType == NSUserActivityTypeBrowsingWeb,
-              let url = userActivity.webpageURL else {
-            return false
-        }
-        let handled = YandexLoginSDK.shared.handleOpen(url)
+        let handled = YandexLoginSDK.shared.tryHandleUserActivity(userActivity)
         if handled {
             restorationHandler([])
         }
