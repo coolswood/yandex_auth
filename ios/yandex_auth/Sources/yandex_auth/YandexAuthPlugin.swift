@@ -4,12 +4,30 @@ import YandexLoginSDK
 
 public class YandexAuthPlugin: NSObject, FlutterPlugin, YandexLoginSDKObserver {
     private var methodResult: FlutterResult?
+    private static var activationError: String?
 
     public static func register(with registrar: FlutterPluginRegistrar) {
+        activationError = nil // Сбрасываем состояние перед каждой регистрацией
         let channel = FlutterMethodChannel(name: "yandex_auth", binaryMessenger: registrar.messenger())
         let instance = YandexAuthPlugin()
         registrar.addMethodCallDelegate(instance, channel: channel)
         registrar.addApplicationDelegate(instance) // Чтобы обрабатывать URL, если потребуется
+        
+        // Автоматически активируем YandexLoginSDK из Info.plist
+        if let clientId = Bundle.main.object(forInfoDictionaryKey: "YAClientId") as? String {
+            let trimmedClientId = clientId.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmedClientId.isEmpty {
+                activationError = "YAClientId in Info.plist is empty or whitespace"
+            } else {
+                do {
+                    try YandexLoginSDK.shared.activate(with: trimmedClientId)
+                } catch {
+                    activationError = "Failed to activate YandexLoginSDK: \(error.localizedDescription)"
+                }
+            }
+        } else {
+            activationError = "YAClientId key missing in Info.plist"
+        }
         
         // Добавляем наблюдателя
         YandexLoginSDK.shared.add(observer: instance)
@@ -17,6 +35,10 @@ public class YandexAuthPlugin: NSObject, FlutterPlugin, YandexLoginSDKObserver {
 
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         if call.method == "signIn" {
+            if let activationError = YandexAuthPlugin.activationError {
+                result(FlutterError(code: "ACTIVATION_ERROR", message: activationError, details: nil))
+                return
+            }
             if methodResult != nil {
                 result(FlutterError(code: "CONCURRENT_OPERATIONS", message: "Concurrent operations detected", details: nil))
                 return
@@ -28,18 +50,15 @@ public class YandexAuthPlugin: NSObject, FlutterPlugin, YandexLoginSDKObserver {
         }
     }
 
+
     // MARK: - App Delegate
 
     public func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey : Any] = [:]) -> Bool {
-        return YandexLoginSDK.shared.handleOpen(url)
+        return YandexLoginSDK.shared.tryHandleOpenURL(url)
     }
 
     public func application(_ application: UIApplication, continue userActivity: NSUserActivity, restorationHandler: @escaping ([Any]?) -> Void) -> Bool {
-        guard userActivity.activityType == NSUserActivityTypeBrowsingWeb,
-              let url = userActivity.webpageURL else {
-            return false
-        }
-        let handled = YandexLoginSDK.shared.handleOpen(url)
+        let handled = YandexLoginSDK.shared.tryHandleUserActivity(userActivity)
         if handled {
             restorationHandler([])
         }

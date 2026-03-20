@@ -11,15 +11,11 @@
 
 ### 📱 Android Setup
 
-1. В файл `android/app/build.gradle` добавьте ваш редирект-схему (обычно `yx<your_client_id>`):
-```groovy
-android {
-    defaultConfig {
-        manifestPlaceholders = [
-            yandexAuthRedirectScheme: "ВАШ_CLIENT_ID"
-        ]
-    }
-}
+1. В файл `android/app/src/main/res/values/strings.xml` добавьте ваш Client ID:
+```xml
+<resources>
+    <string name="yandex_client_id">ВАШ_CLIENT_ID</string>
+</resources>
 ```
 
 ### 🍏 iOS Setup
@@ -43,14 +39,19 @@ android {
 
 <key>LSApplicationQueriesSchemes</key>
 <array>
+    <string>primaryyandexloginsdk</string>
+    <string>secondaryyandexloginsdk</string>
     <string>yandexauth</string>
     <string>yandexauth2</string>
     <string>yandexauth4</string>
 </array>
 
-<key>YandexLoginClientID</key>
+<key>YAClientId</key>
 <string>ВАШ_CLIENT_ID</string>
 ```
+
+> [!NOTE]
+> Плагин автоматически перехватывает URL-адреса через систему делегатов Flutter. **Никаких ручных правок в `AppDelegate.swift` или `SceneDelegate.swift` делать не нужно.**
 
 2. **Дополнительно для универсальных ссылок (Universal Links)**:
 В настройках Xcode добавьте **Capability: Associated Domains** и впишите домен (заменив `ВАШ_CLIENT_ID`):
