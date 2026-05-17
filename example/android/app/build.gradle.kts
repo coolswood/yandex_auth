@@ -28,6 +28,8 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        manifestPlaceholders += mapOf("YANDEX_CLIENT_ID" to "ВАШ_CLIENT_ID")
     }
 
     buildTypes {

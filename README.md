@@ -11,11 +11,14 @@
 
 ### 📱 Android Setup
 
-1. В файл `android/app/src/main/res/values/strings.xml` добавьте ваш Client ID:
-```xml
-<resources>
-    <string name="yandex_client_id">ВАШ_CLIENT_ID</string>
-</resources>
+1. В файл `android/app/build.gradle` добавьте `manifestPlaceholders` с вашим Client ID внутри блока `defaultConfig`:
+```gradle
+android {
+    defaultConfig {
+        // ...
+        manifestPlaceholders += [YANDEX_CLIENT_ID: "ВАШ_CLIENT_ID"]
+    }
+}
 ```
 
 ### 🍏 iOS Setup
