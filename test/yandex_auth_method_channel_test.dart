@@ -38,10 +38,7 @@ void main() {
 
   test('signIn: код "cancelled" → YandexAuthCancelledException', () async {
     mockHandler((methodCall) async {
-      throw PlatformException(
-        code: 'cancelled',
-        message: 'Signin cancelled',
-      );
+      throw PlatformException(code: 'cancelled', message: 'Signin cancelled');
     });
 
     await expectLater(
@@ -50,51 +47,89 @@ void main() {
     );
   });
 
-  test('signIn: код "sdk_error" → YandexAuthFailedException с правильным кодом',
-      () async {
-    mockHandler((methodCall) async {
-      throw PlatformException(
-        code: 'sdk_error',
-        message: 'network failure',
-        details: 'stacktrace',
+  test(
+    'signIn: код "sdk_error" → YandexAuthFailedException с правильным кодом',
+    () async {
+      mockHandler((methodCall) async {
+        throw PlatformException(
+          code: 'sdk_error',
+          message: 'network failure',
+          details: 'stacktrace',
+        );
+      });
+
+      await expectLater(
+        platform.signIn(),
+        throwsA(
+          isA<YandexAuthFailedException>()
+              .having((e) => e.code, 'code', YandexAuthErrorCode.sdkError)
+              .having((e) => e.message, 'message', 'network failure')
+              .having((e) => e.details, 'details', 'stacktrace'),
+        ),
       );
-    });
+    },
+  );
 
-    await expectLater(
-      platform.signIn(),
-      throwsA(
-        isA<YandexAuthFailedException>()
-            .having((e) => e.code, 'code', YandexAuthErrorCode.sdkError)
-            .having((e) => e.message, 'message', 'network failure')
-            .having((e) => e.details, 'details', 'stacktrace'),
-      ),
-    );
-  });
+  test(
+    'signIn: неизвестный код → YandexAuthFailedException с code=unknown',
+    () async {
+      mockHandler((methodCall) async {
+        throw PlatformException(code: 'something_unexpected', message: 'weird');
+      });
 
-  test('signIn: неизвестный код → YandexAuthFailedException с code=unknown',
-      () async {
+      await expectLater(
+        platform.signIn(),
+        throwsA(
+          isA<YandexAuthFailedException>().having(
+            (e) => e.code,
+            'code',
+            YandexAuthErrorCode.unknown,
+          ),
+        ),
+      );
+    },
+  );
+
+  test(
+    'signIn: null-результат → YandexAuthFailedException (страховка)',
+    () async {
+      mockHandler((methodCall) async => null);
+
+      await expectLater(
+        platform.signIn(),
+        throwsA(
+          isA<YandexAuthFailedException>().having(
+            (e) => e.code,
+            'code',
+            YandexAuthErrorCode.unknown,
+          ),
+        ),
+      );
+    },
+  );
+
+  test('logout: успешный no-op/вызов не выбрасывает', () async {
     mockHandler((methodCall) async {
-      throw PlatformException(code: 'something_unexpected', message: 'weird');
+      if (methodCall.method == 'logout') return null;
+      return null;
+    });
+
+    await platform.logout();
+  });
+
+  test('logout: ошибка SDK → YandexAuthFailedException', () async {
+    mockHandler((methodCall) async {
+      throw PlatformException(code: 'sdk_error', message: 'logout failed');
     });
 
     await expectLater(
-      platform.signIn(),
+      platform.logout(),
       throwsA(
-        isA<YandexAuthFailedException>()
-            .having((e) => e.code, 'code', YandexAuthErrorCode.unknown),
-      ),
-    );
-  });
-
-  test('signIn: null-результат → YandexAuthFailedException (страховка)',
-      () async {
-    mockHandler((methodCall) async => null);
-
-    await expectLater(
-      platform.signIn(),
-      throwsA(
-        isA<YandexAuthFailedException>()
-            .having((e) => e.code, 'code', YandexAuthErrorCode.unknown),
+        isA<YandexAuthFailedException>().having(
+          (e) => e.code,
+          'code',
+          YandexAuthErrorCode.sdkError,
+        ),
       ),
     );
   });

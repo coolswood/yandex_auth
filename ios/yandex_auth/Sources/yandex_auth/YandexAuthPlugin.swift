@@ -54,6 +54,17 @@ public class YandexAuthPlugin: NSObject, FlutterPlugin, YandexLoginSDKObserver {
             }
             methodResult = result
             signIn()
+        } else if call.method == "logout" {
+            do {
+                try YandexLoginSDK.shared.logout()
+                result(nil)
+            } catch {
+                result(FlutterError(
+                    code: Self.errorSdkError,
+                    message: error.localizedDescription,
+                    details: "\(error)"
+                ))
+            }
         } else {
             result(FlutterMethodNotImplemented)
         }
@@ -75,30 +86,33 @@ public class YandexAuthPlugin: NSObject, FlutterPlugin, YandexLoginSDKObserver {
     }
 
     private func signIn() {
-        var rootViewController: UIViewController? = nil
-
-        if #available(iOS 13.0, *) {
-            rootViewController = UIApplication.shared.connectedScenes
-                .filter { $0.activationState == .foregroundActive }
-                .compactMap { $0 as? UIWindowScene }
-                .flatMap { $0.windows }
-                .first { $0.isKeyWindow }?.rootViewController
-        }
-
-        if rootViewController == nil {
-            rootViewController = UIApplication.shared.windows.first { $0.isKeyWindow }?.rootViewController
-        }
-
-        guard let validRootViewController = rootViewController else {
-            methodResult?(FlutterError(code: Self.errorNoActivity, message: "Failed to find root view controller", details: nil))
+        // Ищем root view controller через активную UIWindowScene.
+        // Минимальный target — iOS 13, поэтому UIScene API доступен всегда.
+        guard
+            let scene = UIApplication.shared.connectedScenes
+                .first(where: {
+                    $0.activationState == .foregroundActive
+                        || $0.activationState == .foregroundInactive
+                }) as? UIWindowScene,
+            let rootViewController = scene.keyWindow?.rootViewController
+        else {
+            methodResult?(FlutterError(
+                code: Self.errorNoActivity,
+                message: "Failed to find root view controller",
+                details: nil
+            ))
             methodResult = nil
             return
         }
 
         do {
-            try YandexLoginSDK.shared.authorize(with: validRootViewController)
+            try YandexLoginSDK.shared.authorize(with: rootViewController)
         } catch {
-            methodResult?(FlutterError(code: Self.errorSdkError, message: error.localizedDescription, details: "\(error)"))
+            methodResult?(FlutterError(
+                code: Self.errorSdkError,
+                message: error.localizedDescription,
+                details: "\(error)"
+            ))
             methodResult = nil
         }
     }
@@ -157,4 +171,16 @@ public class YandexAuthPlugin: NSObject, FlutterPlugin, YandexLoginSDKObserver {
     private static let errorNoActivity = "no_activity"
     private static let errorCancelled = "cancelled"
     private static let errorSdkError = "sdk_error"
+}
+
+// MARK: - UIWindowScene helper
+
+private extension UIWindowScene {
+    /// Возвращает ключевое окно сцены.
+    ///
+    /// Аналог deprecated `UIApplication.shared.windows.first { $0.isKeyWindow }`,
+    /// но работающий через UIScene API (доступно с iOS 13 — минимальный target).
+    var keyWindow: UIWindow? {
+        windows.first(where: \.isKeyWindow)
+    }
 }

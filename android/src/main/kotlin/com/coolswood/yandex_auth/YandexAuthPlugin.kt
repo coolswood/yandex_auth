@@ -2,6 +2,7 @@ package com.coolswood.yandex_auth
 
 import android.app.Activity
 import android.content.Intent
+import android.util.Log
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.embedding.engine.plugins.activity.ActivityAware
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
@@ -66,6 +67,12 @@ class YandexAuthPlugin :
                 result.error(ERROR_SDK_ERROR, e.message ?: "Unknown error", null)
                 pendingResult = null
             }
+        } else if (call.method == "logout") {
+            // Yandex Auth SDK для Android stateless — он не хранит токены
+            // и не предоставляет logout. Приложение должно удалить токен
+            // из своего хранилища самостоятельно.
+            Log.w(TAG, "logout() is a no-op on Android: Yandex Auth SDK is stateless")
+            result.success(null)
         } else {
             result.notImplemented()
         }
@@ -151,6 +158,7 @@ class YandexAuthPlugin :
     }
 
     private companion object {
+        const val TAG = "YandexAuthPlugin"
         const val CHANNEL_NAME = "yandex_auth"
         const val REQUEST_LOGIN_SDK = 52500
         const val ERROR_CANCELLED = "cancelled"

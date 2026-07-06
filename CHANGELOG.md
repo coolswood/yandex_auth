@@ -1,3 +1,17 @@
+## 1.3.1
+
+* Добавлен метод `YandexAuth.logout()`. На iOS очищает кеш JWT внутри
+  Yandex Login SDK; на Android — no-op (SDK stateless, токен нужно удалять
+  в хранилище приложения). При ошибке (только iOS) выбрасывает
+  `YandexAuthFailedException`.
+* Публичный API задокументирован dartdoc'ом.
+* Включены строгие линтеры (`strict-casts`, `strict-raw-types`,
+  `public_member_api_docs`, `prefer_single_quotes`, `require_trailing_commas`).
+* iOS: убран deprecated fallback через `UIApplication.shared.windows`,
+  поиск root view controller теперь идёт единым путём через `UIWindowScene`.
+* Обновлены нативные зависимости: iOS YandexLoginSDK 3.1.0 → 3.1.1,
+  Android authsdk 3.2.0 → 3.2.1.
+
 ## 1.3.0
 
 **Breaking changes:**

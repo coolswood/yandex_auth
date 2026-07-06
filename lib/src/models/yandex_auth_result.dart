@@ -1,10 +1,7 @@
 /// Результат успешной авторизации через Yandex Auth.
 class YandexAuthResult {
   /// Создаёт результат авторизации.
-  YandexAuthResult({
-    required this.token,
-    this.expiresIn,
-  });
+  YandexAuthResult({required this.token, this.expiresIn});
 
   /// OAuth-токен Яндекс.
   final String token;
@@ -25,10 +22,7 @@ class YandexAuthResult {
 
   /// Сериализует результат в карту (для логирования/тестов).
   Map<String, dynamic> toMap() {
-    return {
-      'token': token,
-      if (expiresIn != null) 'expiresIn': expiresIn,
-    };
+    return {'token': token, if (expiresIn != null) 'expiresIn': expiresIn};
   }
 
   @override

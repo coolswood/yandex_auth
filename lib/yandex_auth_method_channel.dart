@@ -23,8 +23,9 @@ class MethodChannelYandexAuth extends YandexAuthPlatform {
   @override
   Future<YandexAuthResult> signIn() async {
     try {
-      final result = await methodChannel
-          .invokeMethod<Map<dynamic, dynamic>>('signIn');
+      final result = await methodChannel.invokeMethod<Map<dynamic, dynamic>>(
+        'signIn',
+      );
       if (result == null) {
         // Подстраховка: нативная сторона не должна возвращать null,
         // но если это произошло — трактуем как неизвестную ошибку.
@@ -39,6 +40,15 @@ class MethodChannelYandexAuth extends YandexAuthPlatform {
     }
   }
 
+  @override
+  Future<void> logout() async {
+    try {
+      await methodChannel.invokeMethod<void>('logout');
+    } on PlatformException catch (e) {
+      throw _mapPlatformException(e);
+    }
+  }
+
   /// Маппит [PlatformException] в типизированное исключение Yandex Auth.
   YandexAuthException _mapPlatformException(PlatformException e) {
     final code = YandexAuthErrorCode.fromString(e.code);
@@ -48,7 +58,9 @@ class MethodChannelYandexAuth extends YandexAuthPlatform {
     return YandexAuthFailedException(
       code: code,
       message: e.message,
-      details: e.details is String ? e.details as String : e.details?.toString(),
+      details: e.details is String
+          ? e.details as String
+          : e.details?.toString(),
     );
   }
 }

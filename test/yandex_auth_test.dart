@@ -10,6 +10,9 @@ class MockYandexAuthPlatform
   @override
   Future<YandexAuthResult> signIn() =>
       Future.value(YandexAuthResult(token: '42'));
+
+  @override
+  Future<void> logout() => Future.value();
 }
 
 void main() {
