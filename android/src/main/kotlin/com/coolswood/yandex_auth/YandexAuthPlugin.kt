@@ -93,9 +93,13 @@ class YandexAuthPlugin :
     override fun onDetachedFromActivityForConfigChanges() {
         // Note: при config change мы НЕ очищаем pendingResult — результат
         // активити будет доставлен в новую активити после onReattached.
+        // contract обнуляем, т.к. он держит ссылку на уничтожаемую Activity
+        // (YandexAuthSdkContract создан с YandexAuthOptions(activity));
+        // он будет пересоздан в onReattachedToActivityForConfigChanges.
         activityBinding?.removeActivityResultListener(this)
         activityBinding = null
         activity = null
+        contract = null
     }
 
     override fun onReattachedToActivityForConfigChanges(binding: ActivityPluginBinding) {

@@ -105,8 +105,16 @@ public class YandexAuthPlugin: NSObject, FlutterPlugin, YandexLoginSDKObserver {
             return
         }
 
+        // Спускаемся к самому верхнему презентованному контроллеру:
+        // если над root уже показан модал (диалог, экран другого плагина),
+        // попытка презентовать с root приведёт к ошибке UIKit.
+        var topViewController = rootViewController
+        while let presented = topViewController.presentedViewController {
+            topViewController = presented
+        }
+
         do {
-            try YandexLoginSDK.shared.authorize(with: rootViewController)
+            try YandexLoginSDK.shared.authorize(with: topViewController)
         } catch {
             methodResult?(FlutterError(
                 code: Self.errorSdkError,
@@ -140,20 +148,24 @@ public class YandexAuthPlugin: NSObject, FlutterPlugin, YandexLoginSDKObserver {
 
     /// Определяет, является ли ошибка результатом отмены авторизации пользователем.
     ///
-    /// Yandex Login SDK не предоставляет публичного API для распознавания
-    /// отмены, поэтому определяем её по двум сигналам:
+    /// Yandex Login SDK не предоставляет публичного типизированного кода
+    /// отмены (`CoreLoginSDKError.userClosedWebViewController` приватный),
+    /// поэтому распознаём её по двум сигналам:
     /// 1. ASWebAuthenticationSession (iOS 13+, основной путь) отбрасывает
     ///    ошибку домена `ASWebAuthenticationSessionErrorDomain` с кодом
-    ///    `.canceledLogin`.
-    /// 2. SFSafariViewController (fallback) — приватная ошибка SDK с
-    ///    фиксированным сообщением о закрытии контроллера.
+    ///    `.canceledLogin` — типизированная проверка.
+    /// 2. SFSafariViewController (fallback) — приватная ошибка SDK
+    ///    `userClosedWebViewController`; проверяем по типобезопасному
+    ///    протоколу `YandexLoginSDKError` и точному сообщению.
     private static func isCancellation(_ error: Error) -> Bool {
         let nsError = error as NSError
         if nsError.domain == ASWebAuthenticationSessionError.errorDomain {
             return nsError.code == ASWebAuthenticationSessionError.canceledLogin.rawValue
         }
-        let message = (error as? YandexLoginSDKError)?.message ?? ""
-        return message.contains("closed the view controller")
+        // Точное сравнение сообщения (а не substring) снижает риск
+        // ложных срабатываний на чужих ошибках сети/парсинга.
+        return (error as? YandexLoginSDKError)?.message
+            == YandexLoginSDKCancellationMessage.userClosedWebViewController
     }
 
     // MARK: - Lifecycle Cleanup
@@ -183,4 +195,13 @@ private extension UIWindowScene {
     var keyWindow: UIWindow? {
         windows.first(where: \.isKeyWindow)
     }
+}
+
+// MARK: - Constants
+
+/// Фиксированные сообщения Yandex Login SDK, на которые опирается
+/// распознавание отмены. Взяты из приватного `CoreLoginSDKError`.
+private enum YandexLoginSDKCancellationMessage {
+    static let userClosedWebViewController =
+        "User has closed the view controller that presented web authorization content."
 }
