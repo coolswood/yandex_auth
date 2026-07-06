@@ -1,3 +1,44 @@
+## 1.3.1
+
+* Добавлен метод `YandexAuth.logout()`. На iOS очищает кеш JWT внутри
+  Yandex Login SDK; на Android — no-op (SDK stateless, токен нужно удалять
+  в хранилище приложения). При ошибке (только iOS) выбрасывает
+  `YandexAuthFailedException`.
+* Публичный API задокументирован dartdoc'ом.
+* Включены строгие линтеры (`strict-casts`, `strict-raw-types`,
+  `public_member_api_docs`, `prefer_single_quotes`, `require_trailing_commas`).
+* iOS: убран deprecated fallback через `UIApplication.shared.windows`,
+  поиск root view controller теперь идёт единым путём через `UIWindowScene`.
+* Обновлены нативные зависимости: iOS YandexLoginSDK 3.1.0 → 3.1.1,
+  Android authsdk 3.2.0 → 3.2.1.
+
+## 1.3.0
+
+**Breaking changes:**
+
+* `signIn()` теперь возвращает `Future<YandexAuthResult>` (non-null). Раньше мог
+  возвращать `null` при отмене, но контракт не соблюдался на нативной стороне.
+* Отмена и ошибки теперь выбрасывают типизированные исключения вместо возврата
+  `null` или «голого» `PlatformException`:
+  * `YandexAuthCancelledException` — пользователь отменил авторизацию.
+  * `YandexAuthFailedException` — прочие ошибки, с полем `code` типа
+    `YandexAuthErrorCode`.
+* Стандартизованы коды ошибок между Android и iOS: `cancelled`, `activation`,
+  `concurrent`, `no_activity`, `sdk_error`, `unknown`. Ранее Android возвращал
+  единый `sign_in_failed`, iOS — разные `ACTIVATION_ERROR`/`CONCURRENT_OPERATIONS`/...
+* Android-пакет переименован с `com.example.yandex_auth` на
+  `com.coolswood.yandex_auth` (префикс `com.example.*` неприемлем для
+  публикуемых плагинов).
+
+**Прочее:**
+
+* `YandexAuthResult` получил корректные `==` / `hashCode`.
+* Восстановлен корректный config-change flow на Android (результат не теряется
+  при пересоздании Activity).
+* Починен тест `yandex_auth_method_channel_test.dart`, который сравнивал
+  объект с `Map`.
+* Расширены тесты: успех, отмена, ошибка SDK, неизвестный код, null-результат.
+
 ## 1.1.0
 
 * **iOS**: Обновлены методы обработки ссылок в `SceneDelegate` согласно актуальной спецификации Yandex Login SDK.

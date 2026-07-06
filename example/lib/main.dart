@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'dart:async';
 
-import 'package:flutter/services.dart';
 import 'package:yandex_auth/yandex_auth.dart';
 
 void main() {
@@ -16,34 +14,25 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  String _platformVersion = 'Unknown';
+  String _status = 'Нажмите «Sign In» для запуска авторизации';
   final _yandexAuthPlugin = YandexAuth();
 
-  @override
-  void initState() {
-    super.initState();
-    initPlatformState();
-  }
-
-  // Platform messages are asynchronous, so we initialize in an async method.
-  Future<void> initPlatformState() async {
-    String platformVersion;
+  Future<void> _signIn() async {
     try {
       final result = await _yandexAuthPlugin.signIn();
-      if (result != null) {
-        platformVersion = 'Token: ${result.token}';
-      } else {
-        platformVersion = 'Sign in returned null';
-      }
-    } on PlatformException catch (e) {
-      platformVersion = 'Failed to sign in: ${e.message}';
+      if (!mounted) return;
+      setState(() {
+        _status = 'Token: ${result.token}';
+      });
+    } on YandexAuthCancelledException {
+      if (!mounted) return;
+      setState(() => _status = 'Авторизация отменена пользователем');
+    } on YandexAuthFailedException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _status = 'Ошибка (${e.code.value}): ${e.message}';
+      });
     }
-
-    if (!mounted) return;
-
-    setState(() {
-      _platformVersion = platformVersion;
-    });
   }
 
   @override
@@ -55,10 +44,13 @@ class _MyAppState extends State<MyApp> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text('Status: $_platformVersion\n'),
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text('Status: $_status'),
+              ),
               ElevatedButton(
-                onPressed: initPlatformState,
-                child: const Text('Sign In again'),
+                onPressed: _signIn,
+                child: const Text('Sign In'),
               ),
             ],
           ),

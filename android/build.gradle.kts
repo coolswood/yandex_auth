@@ -1,4 +1,4 @@
-group = "com.example.yandex_auth"
+group = "com.coolswood.yandex_auth"
 version = "1.0-SNAPSHOT"
 
 buildscript {
@@ -27,7 +27,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.yandex_auth"
+    namespace = "com.coolswood.yandex_auth"
 
     compileSdk = 36
 
@@ -71,7 +71,7 @@ android {
 }
 
 dependencies {
-    implementation("com.yandex.android:authsdk:3.2.0")
+    implementation("com.yandex.android:authsdk:3.2.1")
     testImplementation("org.jetbrains.kotlin:kotlin-test")
     testImplementation("org.mockito:mockito-core:5.0.0")
 }

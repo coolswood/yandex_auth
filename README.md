@@ -64,7 +64,9 @@ applinks:yxВАШ_CLIENT_ID.oauth.yandex.ru
 
 ## 🚀 Использование
 
-Вызовите метод `signIn()` для запуска процесса:
+Вызовите метод `signIn()` для запуска процесса авторизации. Метод возвращает
+`Future<YandexAuthResult>` с токеном при успехе либо выбрасывает типизированное
+исключение при неудаче.
 
 ```dart
 import 'package:yandex_auth/yandex_auth.dart';
@@ -74,39 +76,39 @@ final _yandexAuth = YandexAuth();
 Future<void> loginWithYandex() async {
   try {
     final result = await _yandexAuth.signIn();
-    if (result != null) {
-      final String token = result.token;
-      final int? expiresIn = result.expiresIn; // На iOS может быть null
-      print('Токен успешно получен: $token, истекает через: $expiresIn сек.');
-    } else {
-      print('Авторизация отменена пользователем');
-    }
-  } catch (e) {
-    print('Ошибка авторизации: $e');
+    final String token = result.token;
+    final int? expiresIn = result.expiresIn; // На iOS может быть null
+    print('Токен успешно получен: $token, истекает через: $expiresIn сек.');
+  } on YandexAuthCancelledException {
+    // Пользователь отменил авторизацию — штатная ситуация
+    print('Авторизация отменена пользователем');
+  } on YandexAuthFailedException catch (e) {
+    // Сбой активации SDK, ошибка сети, нет Activity и т.п.
+    print('Ошибка (${e.code.value}): ${e.message}');
+    if (e.details != null) print('Детали: ${e.details}');
   }
 }
 ```
 
 ### ⚠️ Обработка ошибок
 
-В случае ошибок на стороны нативных SDK (проблемы с сетью, некорректная настройка приложения в консоли Яндекс и т.д.) плагин выбросит `PlatformException`.
+Плагин выбрасывает исключения из семейства `YandexAuthException`:
 
-Вы можете получить детальную информацию для логирования:
+| Исключение                         | Когда                                              |
+|------------------------------------|----------------------------------------------------|
+| `YandexAuthCancelledException`     | Пользователь закрыл экран входа / нажал «Отмена»   |
+| `YandexAuthFailedException`        | Прочие ошибки (см. `code` ниже)                    |
 
-```dart
-import 'package:flutter/services.dart';
+`YandexAuthFailedException.code` принимает значения `YandexAuthErrorCode`:
 
-Future<void> loginWithYandex() async {
-  try {
-    final result = await _yandexAuth.signIn();
-    // ...
-  } on PlatformException catch (e) {
-    print('Код ошибки: ${e.code}');
-    print('Сообщение: ${e.message}');
-    print('Детали (нативный стек): ${e.details}');
-  } catch (e) {
-    print('Неизвестная ошибка: $e');
-  }
-}
-```
+| Код           | Значение                                              |
+|---------------|-------------------------------------------------------|
+| `activation`  | Не задан/пуст `YAClientId` или не удалось активировать SDK |
+| `concurrent`  | Повторный вызов `signIn()` поверх уже идущего          |
+| `no_activity` | Activity (Android) / root view controller (iOS) недоступны |
+| `sdk_error`   | Ошибка Yandex Login SDK (сеть, невалидный config и т.п.) |
+| `cancelled`   | Отмена пользователем (только в виде `YandexAuthCancelledException`) |
+| `unknown`     | Неизвестная/нестандартная ошибка                       |
+
+Коды стандартизованы и совпадают на Android и iOS.
 

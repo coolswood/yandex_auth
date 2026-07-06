@@ -4,6 +4,10 @@ import 'yandex_auth_method_channel.dart';
 
 import 'src/models/yandex_auth_result.dart';
 
+/// Платформенный интерфейс для реализации [YandexAuth].
+///
+/// Конкретные реализации (например [MethodChannelYandexAuth])
+/// регистрируются через [instance].
 abstract class YandexAuthPlatform extends PlatformInterface {
   /// Constructs a YandexAuthPlatform.
   YandexAuthPlatform() : super(token: _token);
@@ -25,7 +29,19 @@ abstract class YandexAuthPlatform extends PlatformInterface {
     _instance = instance;
   }
 
-  Future<YandexAuthResult?> signIn() {
+  /// Запускает авторизацию через Яндекс.
+  ///
+  /// См. документацию на [YandexAuth.signIn].
+  Future<YandexAuthResult> signIn() {
     throw UnimplementedError('signIn() has not been implemented.');
+  }
+
+  /// Сбрасывает состояние авторизации на стороне SDK.
+  ///
+  /// На iOS очищает кеш JWT внутри Yandex Login SDK. На Android — no-op,
+  /// так как Yandex Auth SDK для Android stateless и не хранит токены;
+  /// приложение должно удалить токен из своего хранилища самостоятельно.
+  Future<void> logout() {
+    throw UnimplementedError('logout() has not been implemented.');
   }
 }

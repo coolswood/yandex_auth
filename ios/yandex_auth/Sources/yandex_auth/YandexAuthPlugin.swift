@@ -1,18 +1,27 @@
+import AuthenticationServices
 import Flutter
 import UIKit
 import YandexLoginSDK
 
+/// Flutter-плагин Yandex Auth для iOS.
+///
+/// Стандартизованные коды ошибок (синхронизированы с Android и Dart-стороны):
+/// - "activation"    — ошибка активации SDK (нет/пустой YAClientId и т.п.)
+/// - "concurrent"    — повторный вызов signIn поверх активного
+/// - "no_activity"   — не найден root view controller
+/// - "cancelled"     — пользователь отменил авторизацию
+/// - "sdk_error"     — прочая ошибка Yandex Login SDK
 public class YandexAuthPlugin: NSObject, FlutterPlugin, YandexLoginSDKObserver {
     private var methodResult: FlutterResult?
     private static var activationError: String?
 
     public static func register(with registrar: FlutterPluginRegistrar) {
         activationError = nil // Сбрасываем состояние перед каждой регистрацией
-        let channel = FlutterMethodChannel(name: "yandex_auth", binaryMessenger: registrar.messenger())
+        let channel = FlutterMethodChannel(name: Self.channelName, binaryMessenger: registrar.messenger())
         let instance = YandexAuthPlugin()
         registrar.addMethodCallDelegate(instance, channel: channel)
         registrar.addApplicationDelegate(instance) // Чтобы обрабатывать URL, если потребуется
-        
+
         // Автоматически активируем YandexLoginSDK из Info.plist
         if let clientId = Bundle.main.object(forInfoDictionaryKey: "YAClientId") as? String {
             let trimmedClientId = clientId.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -28,7 +37,7 @@ public class YandexAuthPlugin: NSObject, FlutterPlugin, YandexLoginSDKObserver {
         } else {
             activationError = "YAClientId key missing in Info.plist"
         }
-        
+
         // Добавляем наблюдателя
         YandexLoginSDK.shared.add(observer: instance)
     }
@@ -36,15 +45,26 @@ public class YandexAuthPlugin: NSObject, FlutterPlugin, YandexLoginSDKObserver {
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         if call.method == "signIn" {
             if let activationError = YandexAuthPlugin.activationError {
-                result(FlutterError(code: "ACTIVATION_ERROR", message: activationError, details: nil))
+                result(FlutterError(code: Self.errorActivation, message: activationError, details: nil))
                 return
             }
             if methodResult != nil {
-                result(FlutterError(code: "CONCURRENT_OPERATIONS", message: "Concurrent operations detected", details: nil))
+                result(FlutterError(code: Self.errorConcurrent, message: "Concurrent operations detected", details: nil))
                 return
             }
             methodResult = result
             signIn()
+        } else if call.method == "logout" {
+            do {
+                try YandexLoginSDK.shared.logout()
+                result(nil)
+            } catch {
+                result(FlutterError(
+                    code: Self.errorSdkError,
+                    message: error.localizedDescription,
+                    details: "\(error)"
+                ))
+            }
         } else {
             result(FlutterMethodNotImplemented)
         }
@@ -66,30 +86,41 @@ public class YandexAuthPlugin: NSObject, FlutterPlugin, YandexLoginSDKObserver {
     }
 
     private func signIn() {
-        var rootViewController: UIViewController? = nil
-        
-        if #available(iOS 13.0, *) {
-            rootViewController = UIApplication.shared.connectedScenes
-                .filter { $0.activationState == .foregroundActive }
-                .compactMap { $0 as? UIWindowScene }
-                .flatMap { $0.windows }
-                .first { $0.isKeyWindow }?.rootViewController
-        }
-        
-        if rootViewController == nil {
-            rootViewController = UIApplication.shared.windows.first { $0.isKeyWindow }?.rootViewController
-        }
-        
-        guard let validRootViewController = rootViewController else {
-            methodResult?(FlutterError(code: "NO_VIEW_CONTROLLER", message: "Failed to find root view controller", details: nil))
+        // Ищем root view controller через активную UIWindowScene.
+        // Минимальный target — iOS 13, поэтому UIScene API доступен всегда.
+        guard
+            let scene = UIApplication.shared.connectedScenes
+                .first(where: {
+                    $0.activationState == .foregroundActive
+                        || $0.activationState == .foregroundInactive
+                }) as? UIWindowScene,
+            let rootViewController = scene.keyWindow?.rootViewController
+        else {
+            methodResult?(FlutterError(
+                code: Self.errorNoActivity,
+                message: "Failed to find root view controller",
+                details: nil
+            ))
             methodResult = nil
             return
         }
-        
+
+        // Спускаемся к самому верхнему презентованному контроллеру:
+        // если над root уже показан модал (диалог, экран другого плагина),
+        // попытка презентовать с root приведёт к ошибке UIKit.
+        var topViewController = rootViewController
+        while let presented = topViewController.presentedViewController {
+            topViewController = presented
+        }
+
         do {
-            try YandexLoginSDK.shared.authorize(with: validRootViewController)
+            try YandexLoginSDK.shared.authorize(with: topViewController)
         } catch {
-            methodResult?(FlutterError(code: "YANDEX_AUTH_ERROR", message: error.localizedDescription, details: "\(error)"))
+            methodResult?(FlutterError(
+                code: Self.errorSdkError,
+                message: error.localizedDescription,
+                details: "\(error)"
+            ))
             methodResult = nil
         }
     }
@@ -98,16 +129,43 @@ public class YandexAuthPlugin: NSObject, FlutterPlugin, YandexLoginSDKObserver {
 
     public func didFinishLogin(with result: Result<LoginResult, any Error>) {
         guard let methodResult = self.methodResult else { return }
-        
+
         switch result {
         case .success(let loginResult):
             methodResult([
                 "token": loginResult.token
             ])
         case .failure(let error):
-            methodResult(FlutterError(code: "YANDEX_AUTH_ERROR", message: error.localizedDescription, details: "\(error)"))
+            // YandexLoginSDK сообщает об отмене через отменённый результат.
+            if Self.isCancellation(error) {
+                methodResult(FlutterError(code: Self.errorCancelled, message: "Signin cancelled", details: "\(error)"))
+            } else {
+                methodResult(FlutterError(code: Self.errorSdkError, message: error.localizedDescription, details: "\(error)"))
+            }
         }
         self.methodResult = nil
+    }
+
+    /// Определяет, является ли ошибка результатом отмены авторизации пользователем.
+    ///
+    /// Yandex Login SDK не предоставляет публичного типизированного кода
+    /// отмены (`CoreLoginSDKError.userClosedWebViewController` приватный),
+    /// поэтому распознаём её по двум сигналам:
+    /// 1. ASWebAuthenticationSession (iOS 13+, основной путь) отбрасывает
+    ///    ошибку домена `ASWebAuthenticationSessionErrorDomain` с кодом
+    ///    `.canceledLogin` — типизированная проверка.
+    /// 2. SFSafariViewController (fallback) — приватная ошибка SDK
+    ///    `userClosedWebViewController`; проверяем по типобезопасному
+    ///    протоколу `YandexLoginSDKError` и точному сообщению.
+    private static func isCancellation(_ error: Error) -> Bool {
+        let nsError = error as NSError
+        if nsError.domain == ASWebAuthenticationSessionError.errorDomain {
+            return nsError.code == ASWebAuthenticationSessionError.canceledLogin.rawValue
+        }
+        // Точное сравнение сообщения (а не substring) снижает риск
+        // ложных срабатываний на чужих ошибках сети/парсинга.
+        return (error as? YandexLoginSDKError)?.message
+            == YandexLoginSDKCancellationMessage.userClosedWebViewController
     }
 
     // MARK: - Lifecycle Cleanup
@@ -116,4 +174,34 @@ public class YandexAuthPlugin: NSObject, FlutterPlugin, YandexLoginSDKObserver {
         YandexLoginSDK.shared.remove(observer: self)
         methodResult = nil
     }
+
+    // MARK: - Constants
+
+    private static let channelName = "yandex_auth"
+    private static let errorActivation = "activation"
+    private static let errorConcurrent = "concurrent"
+    private static let errorNoActivity = "no_activity"
+    private static let errorCancelled = "cancelled"
+    private static let errorSdkError = "sdk_error"
+}
+
+// MARK: - UIWindowScene helper
+
+private extension UIWindowScene {
+    /// Возвращает ключевое окно сцены.
+    ///
+    /// Аналог deprecated `UIApplication.shared.windows.first { $0.isKeyWindow }`,
+    /// но работающий через UIScene API (доступно с iOS 13 — минимальный target).
+    var keyWindow: UIWindow? {
+        windows.first(where: \.isKeyWindow)
+    }
+}
+
+// MARK: - Constants
+
+/// Фиксированные сообщения Yandex Login SDK, на которые опирается
+/// распознавание отмены. Взяты из приватного `CoreLoginSDKError`.
+private enum YandexLoginSDKCancellationMessage {
+    static let userClosedWebViewController =
+        "User has closed the view controller that presented web authorization content."
 }

@@ -1,4 +1,4 @@
-package com.example.yandex_auth
+package com.coolswood.yandex_auth
 
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
@@ -23,7 +23,7 @@ internal class YandexAuthPluginTest {
         plugin.onMethodCall(call, mockResult)
 
         Mockito.verify(mockResult).error(
-            Mockito.eq("sign_in_failed"),
+            Mockito.eq("no_activity"),
             Mockito.eq("Activity or Contract not initialized"),
             Mockito.isNull()
         )
