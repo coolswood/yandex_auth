@@ -71,7 +71,7 @@ android {
 }
 
 dependencies {
-    implementation("com.yandex.android:authsdk:3.2.0")
+    implementation("com.yandex.android:authsdk:3.2.1")
     testImplementation("org.jetbrains.kotlin:kotlin-test")
     testImplementation("org.mockito:mockito-core:5.0.0")
 }
