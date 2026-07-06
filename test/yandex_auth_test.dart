@@ -8,7 +8,8 @@ class MockYandexAuthPlatform
     with MockPlatformInterfaceMixin
     implements YandexAuthPlatform {
   @override
-  Future<YandexAuthResult?> signIn() => Future.value(YandexAuthResult(token: '42'));
+  Future<YandexAuthResult> signIn() =>
+      Future.value(YandexAuthResult(token: '42'));
 }
 
 void main() {
@@ -18,12 +19,12 @@ void main() {
     expect(initialPlatform, isInstanceOf<MethodChannelYandexAuth>());
   });
 
-  test('signIn', () async {
+  test('signIn возвращает результат из платформенной реализации', () async {
     YandexAuth yandexAuthPlugin = YandexAuth();
     MockYandexAuthPlatform fakePlatform = MockYandexAuthPlatform();
     YandexAuthPlatform.instance = fakePlatform;
 
     final result = await yandexAuthPlugin.signIn();
-    expect(result?.token, '42');
+    expect(result.token, '42');
   });
 }

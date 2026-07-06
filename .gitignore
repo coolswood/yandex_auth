@@ -2,3 +2,14 @@
 # FVM Version Cache
 .fvm/
 .dart_tool/
+
+# Build artifacts
+build/
+
+# IntelliJ / Android Studio project files
+*.iml
+.idea/
+
+# CocoaPods / SPM artifacts (if any committed by mistake)
+example/ios/Pods/
+example/ios/.symlinks/

@@ -25,7 +25,7 @@ abstract class YandexAuthPlatform extends PlatformInterface {
     _instance = instance;
   }
 
-  Future<YandexAuthResult?> signIn() {
+  Future<YandexAuthResult> signIn() {
     throw UnimplementedError('signIn() has not been implemented.');
   }
 }

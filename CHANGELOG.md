@@ -1,3 +1,30 @@
+## 1.3.0
+
+**Breaking changes:**
+
+* `signIn()` теперь возвращает `Future<YandexAuthResult>` (non-null). Раньше мог
+  возвращать `null` при отмене, но контракт не соблюдался на нативной стороне.
+* Отмена и ошибки теперь выбрасывают типизированные исключения вместо возврата
+  `null` или «голого» `PlatformException`:
+  * `YandexAuthCancelledException` — пользователь отменил авторизацию.
+  * `YandexAuthFailedException` — прочие ошибки, с полем `code` типа
+    `YandexAuthErrorCode`.
+* Стандартизованы коды ошибок между Android и iOS: `cancelled`, `activation`,
+  `concurrent`, `no_activity`, `sdk_error`, `unknown`. Ранее Android возвращал
+  единый `sign_in_failed`, iOS — разные `ACTIVATION_ERROR`/`CONCURRENT_OPERATIONS`/...
+* Android-пакет переименован с `com.example.yandex_auth` на
+  `com.coolswood.yandex_auth` (префикс `com.example.*` неприемлем для
+  публикуемых плагинов).
+
+**Прочее:**
+
+* `YandexAuthResult` получил корректные `==` / `hashCode`.
+* Восстановлен корректный config-change flow на Android (результат не теряется
+  при пересоздании Activity).
+* Починен тест `yandex_auth_method_channel_test.dart`, который сравнивал
+  объект с `Map`.
+* Расширены тесты: успех, отмена, ошибка SDK, неизвестный код, null-результат.
+
 ## 1.1.0
 
 * **iOS**: Обновлены методы обработки ссылок в `SceneDelegate` согласно актуальной спецификации Yandex Login SDK.
