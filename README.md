@@ -112,3 +112,22 @@ Future<void> loginWithYandex() async {
 
 Коды стандартизованы и совпадают на Android и iOS.
 
+### 🚪 Выход (logout)
+
+Для сброса состояния авторизации на стороне SDK вызовите `logout()`:
+
+```dart
+try {
+  await _yandexAuth.logout();
+} on YandexAuthFailedException catch (e) {
+  // Ошибка очистки кеша JWT (только iOS)
+  print('Ошибка logout (${e.code.value}): ${e.message}');
+}
+```
+
+> [!NOTE]
+> На **iOS** `logout()` очищает кеш JWT внутри Yandex Login SDK.
+> На **Android** метод является no-op: Yandex Auth SDK для Android stateless
+> и не хранит токены — приложение должно удалить токен из своего хранилища
+> самостоятельно.
+

@@ -1,3 +1,20 @@
+## 1.3.2
+
+* iOS: `PrivacyInfo.xcprivacy` теперь реально поставляется в артефакте
+  (раньше файл существовал, но не был объявлен ресурсом в `Package.swift`).
+* Android: починен запуск юнит-тестов (`testDebugUnitTest`) — сборка падала
+  на подстановке `YANDEX_CLIENT_ID` в манифесте, т.к. на уровне библиотеки
+  значение placeholder'а неизвестно. Добавлено запасное значение в
+  `defaultConfig` библиотеки; при сборке приложения приоритет остаётся у
+  `manifestPlaceholders` из app-level `build.gradle`.
+* Example (iOS): `Package.resolved` обновлён с YandexLoginSDK 3.0.3 до 3.1.1 —
+  соответствует версии, требуемой плагином.
+* Обновлены инструменты сборки Android: AGP 8.11.1 → 8.13.2,
+  Kotlin 2.2.20 → 2.2.21, Mockito 5.0.0 → 5.23.0 (тесты).
+* Удалён дублирующий `android/settings.gradle` (проект использует `.kts`).
+* README: задокументирован `YandexAuth.logout()`; в example добавлена
+  кнопка Logout.
+
 ## 1.3.1
 
 * Добавлен метод `YandexAuth.logout()`. На iOS очищает кеш JWT внутри

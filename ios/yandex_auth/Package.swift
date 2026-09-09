@@ -22,11 +22,10 @@ let package = Package(
             ],
             path: "Sources/yandex_auth",
             resources: [
-                // If your plugin requires a privacy manifest, for example if it uses any required
-                // reason APIs, update the PrivacyInfo.xcprivacy file to describe your plugin's
-                // privacy impact, and then uncomment these lines. For more information, see
-                // https://developer.apple.com/documentation/bundleresources/privacy_manifest_files
-                // .process("PrivacyInfo.xcprivacy"),
+                // Privacy manifest: плагин не собирает данные и не использует
+                // required-reason API, но манифест поставляется явно, чтобы
+                // соответствовать требованиям App Store для сторонних SDK.
+                .process("PrivacyInfo.xcprivacy"),
             ]
         )
     ]

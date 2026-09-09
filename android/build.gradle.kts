@@ -2,14 +2,14 @@ group = "com.coolswood.yandex_auth"
 version = "1.0-SNAPSHOT"
 
 buildscript {
-    val kotlinVersion = "2.2.20"
+    val kotlinVersion = "2.2.21"
     repositories {
         google()
         mavenCentral()
     }
 
     dependencies {
-        classpath("com.android.tools.build:gradle:8.11.1")
+        classpath("com.android.tools.build:gradle:8.13.2")
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion")
     }
 }
@@ -51,6 +51,11 @@ android {
 
     defaultConfig {
         minSdk = 24
+        // Yandex authsdk требует подстановку YANDEX_CLIENT_ID в манифесте.
+        // Это запасное значение нужно только для юнит-тестов самой библиотеки
+        // (app-level manifestPlaceholders при этом неизвестны); при сборке
+        // приложения приоритет имеет значение из build.gradle приложения.
+        manifestPlaceholders["YANDEX_CLIENT_ID"] = "unit_test_client_id"
     }
 
     testOptions {
@@ -73,5 +78,5 @@ android {
 dependencies {
     implementation("com.yandex.android:authsdk:3.2.1")
     testImplementation("org.jetbrains.kotlin:kotlin-test")
-    testImplementation("org.mockito:mockito-core:5.0.0")
+    testImplementation("org.mockito:mockito-core:5.23.0")
 }
