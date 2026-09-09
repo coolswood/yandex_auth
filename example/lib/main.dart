@@ -35,6 +35,19 @@ class _MyAppState extends State<MyApp> {
     }
   }
 
+  Future<void> _logout() async {
+    try {
+      await _yandexAuthPlugin.logout();
+      if (!mounted) return;
+      setState(() => _status = 'Выполнен logout (кеш JWT очищен на iOS)');
+    } on YandexAuthFailedException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _status = 'Ошибка logout (${e.code.value}): ${e.message}';
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -48,10 +61,9 @@ class _MyAppState extends State<MyApp> {
                 padding: const EdgeInsets.all(16),
                 child: Text('Status: $_status'),
               ),
-              ElevatedButton(
-                onPressed: _signIn,
-                child: const Text('Sign In'),
-              ),
+              ElevatedButton(onPressed: _signIn, child: const Text('Sign In')),
+              const SizedBox(height: 8),
+              OutlinedButton(onPressed: _logout, child: const Text('Logout')),
             ],
           ),
         ),
